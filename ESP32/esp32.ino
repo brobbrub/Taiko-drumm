@@ -20,10 +20,13 @@ const int threshold = 1000;
 // Tempo di debounce (in millisecondi)
 const unsigned long debounceDelay = 10;
 
+// Delay per ogni ciclo dei task, definito come parametro globale (in ticks)
+const TickType_t TASK_DELAY = pdMS_TO_TICKS(1);
+
 // Array per tenere traccia dell'ultimo colpo per ciascun sensore
 volatile unsigned long lastHitTime[NUM_SENSORS] = {0, 0, 0, 0};
 
-// Oggetto per emulare un controller HID
+// Oggetto per emulare un controller HID via BLE
 BleGamepad bleGamepad;
 
 //
@@ -69,8 +72,8 @@ void blueTask(void *parameter) {
         bleGamepad.release(BUTTON_6);
       }
     }
-
-    delay(1); // Piccola pausa per non saturare il processore
+    // Usa vTaskDelay invece di delay
+    vTaskDelay(TASK_DELAY);
   }
 }
 
@@ -117,8 +120,8 @@ void redTask(void *parameter) {
         bleGamepad.release(BUTTON_4);
       }
     }
-
-    delay(1); // Piccola pausa per non saturare il processore
+    // Usa vTaskDelay invece di delay
+    vTaskDelay(TASK_DELAY);
   }
 }
 
@@ -133,7 +136,7 @@ void setup() {
     pinMode(sensorPins[i], INPUT);
   }
 
-  // Inizializza il controller HID
+  // Inizializza il controller HID via BLE
   bleGamepad.begin();
   Serial.println("In attesa di connessione Bluetooth...");
 
@@ -165,5 +168,5 @@ void setup() {
 //
 void loop() {
   // Il loop principale può rimanere vuoto oppure eseguire altre operazioni
-  delay(1000);
+  vTaskDelay(pdMS_TO_TICKS(1000));
 }
