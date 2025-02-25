@@ -137,7 +137,7 @@ void setup() {
   }
 
   // Inizializza il controller HID via BLE
-  bleGamepad.begin();
+  bleGamepad.begin("Taiko Drumm 1");
   Serial.println("In attesa di connessione Bluetooth...");
 
   // Crea il task per i sensori Blu sul core 0

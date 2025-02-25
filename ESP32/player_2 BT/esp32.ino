@@ -1,7 +1,5 @@
 #include <Arduino.h>
 #include <BleGamepad.h>
-#include <USB.h>
-#include <USBHIDJoystick.h>  // Libreria per USB HID Joystick
 
 #define NUM_SENSORS 4
 
@@ -28,23 +26,8 @@ const TickType_t TASK_DELAY = pdMS_TO_TICKS(1);
 // Array per tenere traccia dell'ultimo colpo per ciascun sensore
 volatile unsigned long lastHitTime[NUM_SENSORS] = {0, 0, 0, 0};
 
-// Oggetti per emulare un controller HID via BLE e USB
+// Oggetto per emulare un controller HID via BLE
 BleGamepad bleGamepad;
-USBHIDJoystick usbGamepad;
-
-// Definizione dei pulsanti (eventuali mapping, da adattare secondo necessità)
-#ifndef BUTTON_4
-#define BUTTON_4 4
-#endif
-#ifndef BUTTON_5
-#define BUTTON_5 5
-#endif
-#ifndef BUTTON_6
-#define BUTTON_6 6
-#endif
-#ifndef BUTTON_7
-#define BUTTON_7 7
-#endif
 
 //
 // Task per gestire i sensori Blu (indici 0 e 3)
@@ -65,8 +48,6 @@ void blueTask(void *parameter) {
     if (trigger0 && trigger3) {
       bleGamepad.press(BUTTON_5); // Simula L1 (Blu Sinistro)
       bleGamepad.press(BUTTON_6); // Simula R1 (Blu Destro)
-      usbGamepad.press(BUTTON_5);
-      usbGamepad.press(BUTTON_6);
       Serial.println("Doppio colpo Blu rilevato");
       lastHitTime[0] = currentTime;
       lastHitTime[3] = currentTime;
@@ -75,26 +56,23 @@ void blueTask(void *parameter) {
       // Se solo uno dei due viene attivato, gestisce il colpo singolo
       if (trigger0) {
         bleGamepad.press(BUTTON_5); // Simula L1 (Blu Sinistro)
-        usbGamepad.press(BUTTON_5);
         Serial.print("Colpo singolo Blu rilevato su: ");
         Serial.println(sensorLabels[0]);
         lastHitTime[0] = currentTime;
       } else {
         bleGamepad.release(BUTTON_5);
-        usbGamepad.release(BUTTON_5);
       }
 
       if (trigger3) {
         bleGamepad.press(BUTTON_6); // Simula R1 (Blu Destro)
-        usbGamepad.press(BUTTON_6);
         Serial.print("Colpo singolo Blu rilevato su: ");
         Serial.println(sensorLabels[3]);
         lastHitTime[3] = currentTime;
       } else {
         bleGamepad.release(BUTTON_6);
-        usbGamepad.release(BUTTON_6);
       }
     }
+    // Usa vTaskDelay invece di delay
     vTaskDelay(TASK_DELAY);
   }
 }
@@ -118,8 +96,6 @@ void redTask(void *parameter) {
     if (trigger1 && trigger2) {
       bleGamepad.press(BUTTON_7); // Simula Freccia Destra (Rosso Sinistro)
       bleGamepad.press(BUTTON_4); // Simula Quadrato (Rosso Destro)
-      usbGamepad.press(BUTTON_7);
-      usbGamepad.press(BUTTON_4);
       Serial.println("Doppio colpo Rosso rilevato");
       lastHitTime[1] = currentTime;
       lastHitTime[2] = currentTime;
@@ -128,26 +104,23 @@ void redTask(void *parameter) {
       // Se solo uno dei due viene attivato, gestisce il colpo singolo
       if (trigger1) {
         bleGamepad.press(BUTTON_7); // Simula Freccia Destra (Rosso Sinistro)
-        usbGamepad.press(BUTTON_7);
         Serial.print("Colpo singolo Rosso rilevato su: ");
         Serial.println(sensorLabels[1]);
         lastHitTime[1] = currentTime;
       } else {
         bleGamepad.release(BUTTON_7);
-        usbGamepad.release(BUTTON_7);
       }
 
       if (trigger2) {
         bleGamepad.press(BUTTON_4); // Simula Quadrato (Rosso Destro)
-        usbGamepad.press(BUTTON_4);
         Serial.print("Colpo singolo Rosso rilevato su: ");
         Serial.println(sensorLabels[2]);
         lastHitTime[2] = currentTime;
       } else {
         bleGamepad.release(BUTTON_4);
-        usbGamepad.release(BUTTON_4);
       }
     }
+    // Usa vTaskDelay invece di delay
     vTaskDelay(TASK_DELAY);
   }
 }
@@ -163,11 +136,9 @@ void setup() {
     pinMode(sensorPins[i], INPUT);
   }
 
-  // Inizializza il controller HID via USB e il controller BLE
-  USB.begin();
-  usbGamepad.begin();
-  bleGamepad.begin("Taiko Drumm 1");
-  Serial.println("In attesa di connessione USB come Joystick e BLE come Gamepad...");
+  // Inizializza il controller HID via BLE
+  bleGamepad.begin();
+  Serial.println("In attesa di connessione Bluetooth...");
 
   // Crea il task per i sensori Blu sul core 0
   xTaskCreatePinnedToCore(
@@ -196,5 +167,6 @@ void setup() {
 // Funzione loop (non utilizzata, in quanto le operazioni sono gestite dai task)
 //
 void loop() {
+  // Il loop principale può rimanere vuoto oppure eseguire altre operazioni
   vTaskDelay(pdMS_TO_TICKS(1000));
 }
