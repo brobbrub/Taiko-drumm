@@ -45,3 +45,5 @@ i tasti vanno configurati nel gioco.
 
 verranno aggiunte piu avanti anche immagini e il progetto da stampare in 3d ma il lavoro e ancora in corso
 
+il tamburo con 2 piastre e stato provato e funziona gli altri non sono ancora stati testati
+
