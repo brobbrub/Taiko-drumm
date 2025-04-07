@@ -42,5 +42,6 @@ per sfruttare la connessione USB e necessario un esp32-S2 o esp32-S3.
 
 i tasti scelti hanno come corrispettivo PS :r1,l1, freccia destra e quadrato
 i tasti vanno configurati nel gioco.
+
 verranno aggiunte piu avanti anche immagini e il progetto da stampare in 3d ma il lavoro e ancora in corso
 
