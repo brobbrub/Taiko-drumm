@@ -2,171 +2,92 @@
 #include <BleGamepad.h>
 
 #define NUM_SENSORS 4
+#define THRESHOLD 1000  // Soglia unica per tutti i sensori
+#define DEBOUNCE_DELAY 10
+#define TASK_DELAY pdMS_TO_TICKS(2)
 
-// Definizione dei pin a cui sono collegati i sensori piezoelettrici
-const int sensorPins[NUM_SENSORS] = {32, 33, 34, 35};
-
-// Etichette per identificare i sensori
-const char* sensorLabels[NUM_SENSORS] = {
-  "Esterno Destro (Blu)",
-  "Interno Destro (Rosso)",
-  "Interno Sinistro (Rosso)",
-  "Esterno Sinistro (Blu)"
+struct SensorConfig {
+    uint8_t pin;
+    uint8_t button1;  // Pulsante principale
+    uint8_t button2;  // Pulsante secondario (0 se non usato)
+    bool useHat;      // true per usare HAT invece di button2
+    volatile uint32_t lastHitTime;
 };
 
-// Soglia per il rilevamento del colpo (da regolare in base alle tue letture)
-const int threshold = 1000;
+// Configurazione con la tua mappatura esatta:
+// - Esterno sinistro: BUTTON_7
+// - Esterno destro: BUTTON_8
+// - Centro sinistro: HAT_RIGHT
+// - Centro destro: BUTTON_4
+SensorConfig sensors[NUM_SENSORS] = {
+    // Pin | Button1 | Button2 | UseHat
+    {32,   BUTTON_8, 0,        false},  // Esterno destro
+    {33,   BUTTON_4, 0,        false},  // Centro destro
+    {34,   0,       HAT_RIGHT, true},   // Centro sinistro (usa HAT)
+    {35,   BUTTON_7, 0,        false}   // Esterno sinistro
+};
 
-// Tempo di debounce (in millisecondi)
-const unsigned long debounceDelay = 10;
-
-// Delay per ogni ciclo dei task, definito come parametro globale (in ticks)
-const TickType_t TASK_DELAY = pdMS_TO_TICKS(1);
-
-// Array per tenere traccia dell'ultimo colpo per ciascun sensore
-volatile unsigned long lastHitTime[NUM_SENSORS] = {0, 0, 0, 0};
-
-// Oggetto per emulare un controller HID via BLE
 BleGamepad bleGamepad;
 
-//
-// Task per gestire i sensori Blu (indici 0 e 3)
-//
-void blueTask(void *parameter) {
-  while (true) {
-    unsigned long currentTime = millis();
+void sensorTask(void *parameter) {
+    SensorConfig *config = (SensorConfig *)parameter;
+    
+    while(true) {
+        const uint32_t currentTime = millis();
+        const int value = analogRead(config->pin);
+        const bool isTriggered = (value > THRESHOLD) && 
+                               (currentTime - config->lastHitTime > DEBOUNCE_DELAY);
 
-    // Legge i valori dei sensori Blu
-    int value0 = analogRead(sensorPins[0]);
-    int value3 = analogRead(sensorPins[3]);
-
-    // Verifica se i valori superano la soglia e se il debounce è trascorso
-    bool trigger0 = (value0 > threshold) && ((currentTime - lastHitTime[0]) > debounceDelay);
-    bool trigger3 = (value3 > threshold) && ((currentTime - lastHitTime[3]) > debounceDelay);
-
-    // Se entrambi i sensori sono attivati contemporaneamente, gestisce il doppio colpo
-    if (trigger0 && trigger3) {
-      bleGamepad.press(BUTTON_5); // Simula L1 (Blu Sinistro)
-      bleGamepad.press(BUTTON_6); // Simula R1 (Blu Destro)
-      Serial.println("Doppio colpo Blu rilevato");
-      lastHitTime[0] = currentTime;
-      lastHitTime[3] = currentTime;
+        if(isTriggered) {
+            // Gestione pulsante principale
+            if(config->button1 != 0) {
+                bleGamepad.press(config->button1);
+            }
+            
+            // Gestione azione secondaria (HAT o pulsante)
+            if(config->useHat) {
+                bleGamepad.setHat(HAT_RIGHT);
+            } else if(config->button2 != 0) {
+                bleGamepad.press(config->button2);
+            }
+            
+            config->lastHitTime = currentTime;
+        } else {
+            // Rilascio
+            if(config->button1 != 0) {
+                bleGamepad.release(config->button1);
+            }
+            if(config->useHat) {
+                bleGamepad.setHat(HAT_CENTERED);
+            } else if(config->button2 != 0) {
+                bleGamepad.release(config->button2);
+            }
+        }
+        vTaskDelay(TASK_DELAY);
     }
-    else {
-      // Se solo uno dei due viene attivato, gestisce il colpo singolo
-      if (trigger0) {
-        bleGamepad.press(BUTTON_5); // Simula L1 (Blu Sinistro)
-        Serial.print("Colpo singolo Blu rilevato su: ");
-        Serial.println(sensorLabels[0]);
-        lastHitTime[0] = currentTime;
-      } else {
-        bleGamepad.release(BUTTON_5);
-      }
-
-      if (trigger3) {
-        bleGamepad.press(BUTTON_6); // Simula R1 (Blu Destro)
-        Serial.print("Colpo singolo Blu rilevato su: ");
-        Serial.println(sensorLabels[3]);
-        lastHitTime[3] = currentTime;
-      } else {
-        bleGamepad.release(BUTTON_6);
-      }
-    }
-    // Usa vTaskDelay invece di delay
-    vTaskDelay(TASK_DELAY);
-  }
 }
 
-//
-// Task per gestire i sensori Rossi (indici 1 e 2)
-//
-void redTask(void *parameter) {
-  while (true) {
-    unsigned long currentTime = millis();
-
-    // Legge i valori dei sensori Rossi
-    int value1 = analogRead(sensorPins[1]);
-    int value2 = analogRead(sensorPins[2]);
-
-    // Verifica se i valori superano la soglia e se il debounce è trascorso
-    bool trigger1 = (value1 > threshold) && ((currentTime - lastHitTime[1]) > debounceDelay);
-    bool trigger2 = (value2 > threshold) && ((currentTime - lastHitTime[2]) > debounceDelay);
-
-    // Se entrambi i sensori sono attivati contemporaneamente, gestisce il doppio colpo
-    if (trigger1 && trigger2) {
-      bleGamepad.press(BUTTON_7); // Simula Freccia Destra (Rosso Sinistro)
-      bleGamepad.press(BUTTON_4); // Simula Quadrato (Rosso Destro)
-      Serial.println("Doppio colpo Rosso rilevato");
-      lastHitTime[1] = currentTime;
-      lastHitTime[2] = currentTime;
-    }
-    else {
-      // Se solo uno dei due viene attivato, gestisce il colpo singolo
-      if (trigger1) {
-        bleGamepad.press(BUTTON_7); // Simula Freccia Destra (Rosso Sinistro)
-        Serial.print("Colpo singolo Rosso rilevato su: ");
-        Serial.println(sensorLabels[1]);
-        lastHitTime[1] = currentTime;
-      } else {
-        bleGamepad.release(BUTTON_7);
-      }
-
-      if (trigger2) {
-        bleGamepad.press(BUTTON_4); // Simula Quadrato (Rosso Destro)
-        Serial.print("Colpo singolo Rosso rilevato su: ");
-        Serial.println(sensorLabels[2]);
-        lastHitTime[2] = currentTime;
-      } else {
-        bleGamepad.release(BUTTON_4);
-      }
-    }
-    // Usa vTaskDelay invece di delay
-    vTaskDelay(TASK_DELAY);
-  }
-}
-
-//
-// Funzione di setup
-//
 void setup() {
-  Serial.begin(115200);
+    // Configurazione BLE Gamepad
+    BleGamepadConfiguration bleConfig;
+    bleConfig.setAutoReport(true);
+    bleConfig.setControllerType(CONTROLLER_TYPE_GAMEPAD);
+    bleConfig.setHatSwitchCount(1);  // Abilita HAT
+    bleConfig.setButtonCount(8);     // Supporta fino a BUTTON_8
+    bleGamepad.begin(&bleConfig);
 
-  // Configura i pin dei sensori come ingressi
-  for (int i = 0; i < NUM_SENSORS; i++) {
-    pinMode(sensorPins[i], INPUT);
-  }
-
-  // Inizializza il controller HID via BLE
-  bleGamepad.begin("Taiko Drumm 1");
-  Serial.println("In attesa di connessione Bluetooth...");
-
-  // Crea il task per i sensori Blu sul core 0
-  xTaskCreatePinnedToCore(
-    blueTask,       // Funzione task
-    "BlueTask",     // Nome del task
-    2048,           // Stack size in bytes
-    NULL,           // Parametro passato al task
-    1,              // Priorità del task
-    NULL,           // Handle del task
-    0               // Core su cui eseguire il task
-  );
-
-  // Crea il task per i sensori Rossi sul core 1
-  xTaskCreatePinnedToCore(
-    redTask,        // Funzione task
-    "RedTask",      // Nome del task
-    2048,           // Stack size in bytes
-    NULL,           // Parametro passato al task
-    1,              // Priorità del task
-    NULL,           // Handle del task
-    1               // Core su cui eseguire il task
-  );
+    // Crea task per ogni sensore
+    for(int i = 0; i < NUM_SENSORS; i++) {
+        xTaskCreatePinnedToCore(
+            sensorTask,
+            "SensorTask",
+            4096,
+            &sensors[i],
+            1,
+            NULL,
+            i % 2  // Alterna i core
+        );
+    }
 }
 
-//
-// Funzione loop (non utilizzata, in quanto le operazioni sono gestite dai task)
-//
-void loop() {
-  // Il loop principale può rimanere vuoto oppure eseguire altre operazioni
-  vTaskDelay(pdMS_TO_TICKS(1000));
-}
+void loop() { vTaskDelete(NULL); }
