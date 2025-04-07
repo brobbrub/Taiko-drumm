@@ -17,7 +17,6 @@ struct SensorConfig {
     bool wasTriggered;
 };
 
-// Configurazione finale (mantenendo i tuoi tasti):
 SensorConfig sensors[NUM_SENSORS] = {
     // Destro: BUTTON_7 (soft), BUTTON_8 (hard)
     {32, BUTTON_7, BUTTON_8, false, 160, 0, false}, 
@@ -77,7 +76,7 @@ void setup() {
         xTaskCreatePinnedToCore(
             sensorTask,
             "SensorTask",
-            4096,  // Stack ridotto (sufficiente)
+            4096, 
             &sensor,
             1,
             NULL,
