@@ -1,6 +1,6 @@
 Taiko Drumm
 
-Taiko Drumm è un progetto che integra il Bluetooth con l'emulazione di un controller multicore su ESP32.
+Taiko Drumm è un progetto con lo scopo di fare un controller tamburo che integra il Bluetooth con l'emulazione di un controller multicore su ESP32.
 
 Requisiti
 
