@@ -16,7 +16,6 @@
 ## Come funziona
 
 I piezoelettrici rilevano i colpi sul tamburo. Il segnale viene letto tramite ADC e filtrato con una **finestra mobile** per calcolare la potenza dell'impatto. Quando supera la soglia (`HIT_THRES`), viene inviato il tasto corrispondente via BLE come gamepad.
-
 La logica **"vince il colore"** risolve i colpi simultanei: se DON e KA vengono colpiti insieme, vince chi ha la potenza più alta (con un margine configurabile).
 
 ---
@@ -34,8 +33,6 @@ La logica **"vince il colore"** risolve i colpi simultanei: se DON e KA vengono 
 - 2 sensori piezoelettrici
 - 2 resistenze da 1 MΩ
 - Pin usati: `32` (KA_L), `33` (DON_R)
-
-> 💡 Per usare la connessione **USB** come controller HID è necessario un **ESP32-S2** o **ESP32-S3**.
 
 ---
 
@@ -106,11 +103,10 @@ I tasti emulati corrispondono ai seguenti input PS:
 
 ## Roadmap
 
-- [x] Versione Portable a 2 zone (testata ✅)
-- [ ] Versione S3 DualCore a 4 zone (in test)
+- [x] Versione Portable a 2 zone (testata e funzionante)
+- [ ] Versione S3 DualCore a 4 zone (realizzata ora in test)
 - [ ] Immagini del circuito e del montaggio
 - [ ] File STL per la scocca stampata in 3D
-- [ ] Supporto USB HID nativo (ESP32-S2/S3)
 
 ---
 
