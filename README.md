@@ -1,49 +1,119 @@
-Taiko Drumm
+# 🥁 Taiko Drumm
 
-Taiko Drumm è un progetto con lo scopo di fare un controller tamburo che integra il Bluetooth con l'emulazione di un controller multicore su ESP32.
+**Taiko Drumm** è un controller tamburo BLE open-source basato su ESP32, pensato per giocare a [Taiko no Tatsujin](https://taiko.namco-ch.net/) e [osu! Taiko](https://osu.ppy.sh/) via Bluetooth come gamepad.
 
-Requisiti
+---
 
-Hardware: ESP32
-4 piezoelettrici, 4 resistenze da 1M
+## Varianti disponibili
 
-Software:
+| Variante | File | Hardware | Stato |
+|---|---|---|---|
+| **S3 DualCore** (4 zone) | `taiko_s3_dualcore.ino` | ESP32-S3, 4 piezo | ✅ In sviluppo |
+| **Portable** (2 zone) | `taiko_portable.ino` | ESP32, 2 piezo | ✅ Testato e funzionante |
 
-Arduino IDE
+---
 
-Git
+## Come funziona
 
-Dipendenze per Bluetooth (ESP32 BLE Library)
+I piezoelettrici rilevano i colpi sul tamburo. Il segnale viene letto tramite ADC e filtrato con una **finestra mobile** per calcolare la potenza dell'impatto. Quando supera la soglia (`HIT_THRES`), viene inviato il tasto corrispondente via BLE come gamepad.
 
-Installazione
+La logica **"vince il colore"** risolve i colpi simultanei: se DON e KA vengono colpiti insieme, vince chi ha la potenza più alta (con un margine configurabile).
 
-Clona il repository:
+---
 
+## Hardware richiesto
+
+### Variante S3 DualCore (4 zone)
+- ESP32-S3
+- 4 sensori piezoelettrici
+- 4 resistenze da 1 MΩ
+- Pin usati: `4` (KA_L), `5` (DON_L), `6` (DON_R), `7` (KA_R)
+
+### Variante Portable (2 zone)
+- ESP32 (qualsiasi modello con BLE)
+- 2 sensori piezoelettrici
+- 2 resistenze da 1 MΩ
+- Pin usati: `32` (KA_L), `33` (DON_R)
+
+> 💡 Per usare la connessione **USB** come controller HID è necessario un **ESP32-S2** o **ESP32-S3**.
+
+---
+
+## Software richiesto
+
+- [Arduino IDE](https://www.arduino.cc/en/software)
+- [ESP32 Arduino Core](https://github.com/espressif/arduino-esp32)
+- Libreria [ESP32-BLE-Gamepad](https://github.com/lemmingDev/ESP32-BLE-Gamepad)
+- Git
+
+---
+
+## Installazione
+
+```bash
+# 1. Clona il repository
 git clone https://github.com/brobbrub/Taiko-drumm.git
-cd taiko-drumm
+cd Taiko-drumm
+```
 
-Apri il file ESP32/esp32.ino con Arduino IDE.
+1. Apri il file `.ino` della variante scelta con **Arduino IDE**
+2. Installa la libreria **ESP32-BLE-Gamepad** dal Library Manager
+3. Seleziona la scheda corretta (`ESP32 Dev Module` o `ESP32S3 Dev Module`)
+4. **Compila e carica** il codice sull'ESP32
 
-Compila e carica il codice su ESP32.
+---
 
-Uso
+## Configurazione
 
-collega i piezoelettrici ai pin indicati nel codice (pin 32,33 per il codice a 2 piastre con bluetooth,32,33,34,35 per quelli con 4)
+Tutti i parametri si trovano all'inizio del file `.ino`:
 
-Assicurati che l'ESP32 sia alimentato e attivo.
+| Parametro | Default | Descrizione |
+|---|---|---|
+| `HIT_THRES` | 255 / 180 | Soglia minima per registrare un colpo |
+| `RESET_THRES` | 100 / 60 | Soglia sotto cui il tasto viene rilasciato |
+| `MARGINE` | 1.1 | Margine per la logica "vince il colore" |
+| `sensitivita[]` | varia per canale | Scala il segnale di ogni piezo |
+| `WINDOW_SIZE` | 16 | Dimensione della finestra mobile |
+| `SAMPLING_US` | 650 / 500 µs | Intervallo di campionamento |
 
-Connetti il controller via Bluetooth o usb(se supportato)
+---
 
-Testa le funzionalità per calibrare i parametri DEBOUNCE_DELAY,THRESHOLD.
+## Mappatura tasti
 
-note
+I tasti emulati corrispondono ai seguenti input PS:
 
-per sfruttare la connessione USB e necessario un esp32-S2 o esp32-S3.
+| Zona | Tasto BLE | Equivalente PS |
+|---|---|---|
+| DON sinistro | HAT_RIGHT (D-Pad →) | Freccia destra |
+| DON destro | BUTTON_1 | Quadrato (□) |
+| KA sinistro | HAT_UP (D-Pad ↑) | Freccia su |
+| KA destro | BUTTON_8 | R1 |
 
-i tasti scelti hanno come corrispettivo PS :r1,l1, freccia destra e quadrato
-i tasti vanno configurati nel gioco.
+> ⚠️ I tasti vanno configurati anche all'interno del gioco (Taiko no Tatsujin / osu!).
 
-verranno aggiunte piu avanti anche immagini e il progetto da stampare in 3d ma il lavoro e ancora in corso
+---
 
-il tamburo con 2 piastre e stato provato e funziona gli altri non sono ancora stati testati
+## Connessione
 
+1. Alimenta l'ESP32
+2. Sul tuo PC/telefono cerca il dispositivo Bluetooth:
+   - `Taiko S3 DualCore` (variante 4 zone)
+   - `Taiko Portable` (variante 2 zone)
+3. Abbina il dispositivo — verrà riconosciuto come **gamepad BLE**
+4. Avvia il gioco e configura i tasti nelle impostazioni
+
+---
+
+## Roadmap
+
+- [x] Versione Portable a 2 zone (testata ✅)
+- [ ] Versione S3 DualCore a 4 zone (in test)
+- [ ] Immagini del circuito e del montaggio
+- [ ] File STL per la scocca stampata in 3D
+- [ ] Supporto USB HID nativo (ESP32-S2/S3)
+
+---
+
+## Licenza
+
+Progetto open-source — libero per uso personale e non commerciale.
